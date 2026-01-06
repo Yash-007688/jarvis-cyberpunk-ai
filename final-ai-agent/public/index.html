@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent - Alexa-like Assistant</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            display: flex;
+            justify-content: flex-start;
+            min-height: 100vh;
+            color: #00ff41;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
+                radial-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            background-color: rgba(10, 10, 20, 0.85);
+            border-radius: 0;
+            padding: 15px;
+            width: 35%; /* Further reduced width */
+            max-width: 400px; /* Smaller max width */
+            margin-left: auto; /* Shifted to the right */
+            margin-right: 20px; /* Extreme right position */
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            height: 70vh; /* Reduced height */
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #00ff41;
+            border-image: linear-gradient(45deg, #00ff41, #00ffff, #ff0080) 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff41, #00ffff, #ff0080, transparent);
+            animation: scanline 8s linear infinite;
+        }
+        
+        @keyframes scanline {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        
+        h1 {
+            color: #00ff41;
+            text-align: left;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
+            font-weight: bold;
+        }
+        
+        .status {
+            text-align: left;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #00ff41;
+            font-size: 14px;
+            text-shadow: 0 0 5px #00ff41;
+        }
+        
+        .chat-container {
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: rgba(5, 5, 10, 0.7);
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 75%;
+            word-wrap: break-word;
+            font-size: 16px;
+            position: relative;
+            border: 1px solid transparent;
+        }
+        
+        .user-message {
+            background: linear-gradient(45deg, #ff0080, #00ffff);
+            margin-left: auto;
+            margin-right: 0;
+            text-align: right;
+            align-self: flex-end;
+            color: #0a0a14;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(255, 0, 128, 0.5);
+        }
+        
+        .agent-message {
+            background: linear-gradient(45deg, #0a0a14, #1a1a2a);
+            margin-right: auto;
+            margin-left: 0;
+            text-align: left;
+            align-self: flex-start;
+            color: #00ff41;
+            border: 1px solid #00ff41;
+            box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+        }
+        
+        .controls {
+            display: none;
+        }
+        
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 22px;
+            background: linear-gradient(45deg, #00ff41, #00ffff);
+            color: #0a0a14;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 2px #0a0a14;
+            box-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+        }
+        
+        button:hover {
+            background: linear-gradient(45deg, #00ffff, #ff0080);
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.7);
+        }
+        
+        button:disabled {
+            background: linear-gradient(45deg, #444444, #666666);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .command-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            position: relative;
+        }
+        
+        #commandInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #00ff41;
+            border-radius: 22px;
+            font-size: 16px;
+            background-color: rgba(5, 5, 10, 0.7);
+            color: #00ff41;
+            box-shadow: inset 0 0 5px rgba(0, 255, 65, 0.3);
+        }
+        
+        #commandInput::placeholder {
+            color: #008841;
+            text-shadow: 0 0 2px #008841;
+        }
+        
+        #commandInput:focus {
+            outline: none;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 5px rgba(0, 255, 255, 0.3);
+        }
+        
+        #sendButton {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 22px;
+            background: linear-gradient(45deg, #ff0080, #00ff41);
+            color: #0a0a14;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 2px #0a0a14;
+            box-shadow: 0 0 8px rgba(255, 0, 128, 0.5);
+        }
+        
+        #sendButton:hover {
+            background: linear-gradient(45deg, #00ff41, #00ffff);
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.7);
+        }
+        
+        .video-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 150px;
+            border: 2px solid #00ff41;
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 10000;
+            background: #000;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+        
+        #userVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border: 2px solid transparent;
+        }
+        
+        .camera-overlay::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #00ff41;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.7);
+        }
+        
+        .system-time {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(90deg, #0a0a14, #1a1a2a);
+            color: #00ff41;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border: 1px solid #00ff41;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            z-index: 1000;
+            border-radius: 8px;
+        }
+        
+        #sendButton {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 22px;
+            background-color: #25d366;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        #sendButton:hover {
+            background-color: #128c7e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="videoContainer" class="video-container">
+            <video id="userVideo" autoplay muted playsinline></video>
+            <div class="camera-overlay"></div>
+        </div>
+        <h1>AI Agent - Alexa-like Assistant</h1>
+        
+        <div class="status" id="status">Ready to start</div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message agent-message">Hello! I'm your AI assistant. How can I help you today?</div>
+        </div>
+        
+
+        
+        <div class="command-input">
+            <input type="text" id="commandInput" placeholder="Type your command here...">
+            <button id="sendButton">Send</button>
+        </div>
+            
+        <div id="systemTime" class="system-time">00:00:00</div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const chatContainer = document.getElementById('chatContainer');
+        const statusElement = document.getElementById('status');
+        const commandInput = document.getElementById('commandInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        let isListening = false;
+        
+        // Add message to chat
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'agent-message');
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Function to speak text using Web Speech API
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Set voice properties
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                // Ensure voices are loaded before selecting one
+                const setVoice = () => {
+                    const voices = speechSynthesis.getVoices();
+                    const englishVoice = voices.find(voice => voice.lang.includes('en') || voice.lang.includes('hi')); // Include English and Hindi voices
+                    if (englishVoice) {
+                        utterance.voice = englishVoice;
+                    }
+                };
+                
+                // Set voice when voices are loaded
+                if (speechSynthesis.getVoices().length > 0) {
+                    setVoice();
+                } else {
+                    speechSynthesis.onvoiceschanged = setVoice;
+                }
+                
+                speechSynthesis.speak(utterance);
+            } else {
+                console.log('Text-to-speech not supported in this browser.');
+            }
+        }
+        
+        // Update status
+        function updateStatus(text) {
+            statusElement.textContent = text;
+        }
+        
+        // Socket event listeners
+        socket.on('connect', () => {
+            updateStatus('Connected to AI Agent server');
+            // Initialize the agent when connected
+            socket.emit('start_listening');
+        });
+        
+        socket.on('agent_response', (data) => {
+            addMessage(data.response);
+            updateStatus('Agent responded');
+            
+            // Speak the response using Web Speech API
+            speakText(data.response);
+        });
+        
+        socket.on('error', (data) => {
+            addMessage('Error: ' + data.message, false);
+            updateStatus('Error occurred');
+        });
+        
+        // Removed voice control buttons since they were removed from HTML
+        
+        // Send button event listener
+        sendButton.addEventListener('click', () => {
+            const command = commandInput.value.trim();
+            if (command) {
+                socket.emit('voice_command', { command: command });
+                addMessage(command, true);
+                commandInput.value = '';
+            }
+        });
+        
+        // Clear chat button event listener
+        document.getElementById('clearChatButton').addEventListener('click', () => {
+            chatContainer.innerHTML = '';
+            addMessage('Hello! I\'m your AI assistant. How can I help you today?');
+        });
+        
+        // Restart server button event listener
+        document.getElementById('restartServerButton').addEventListener('click', () => {
+            if (confirm('Are you sure you want to restart the server? This will refresh the page.')) {
+                window.location.reload();
+            }
+        });
+        
+        // Allow sending with Enter key
+        commandInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+        
+        // Update system time every second
+        function updateSystemTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            document.getElementById('systemTime').textContent = timeString;
+        }
+        
+        // Initialize and update time every second
+        updateSystemTime();
+        setInterval(updateSystemTime, 1000);
+        
+        // Access camera and display video
+        async function initCamera() {
+            try {
+                const video = document.getElementById('userVideo');
+                
+                // Check if we have permission to access the camera
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 640 }, 
+                        height: { ideal: 480 },
+                        facingMode: 'user' // Front camera
+                    }, 
+                    audio: false 
+                });
+                
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                // Add camera access indicator
+                const overlay = document.querySelector('.camera-overlay');
+                if (overlay) {
+                    overlay.style.border = '2px solid #00ff41';
+                }
+                
+                console.log('Camera access granted');
+                
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                
+                // Create a placeholder if camera access is denied
+                const video = document.getElementById('userVideo');
+                video.style.display = 'flex';
+                video.style.alignItems = 'center';
+                video.style.justifyContent = 'center';
+                video.style.color = '#00ff41';
+                video.style.textAlign = 'center';
+                video.style.background = 'linear-gradient(45deg, #0a0a14, #1a1a2a)';
+                video.textContent = 'CAMERA ACCESS DENIED\nClick to request';
+                
+                // Add click to request camera access
+                video.addEventListener('click', initCamera);
+            }
+        }
+        
+        // Initialize camera when page loads
+        window.addEventListener('load', initCamera);
+    </script>
+</body>
+</html>

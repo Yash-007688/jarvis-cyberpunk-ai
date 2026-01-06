@@ -1,0 +1,7 @@
+rich==14.1.0
+colorama==0.4.6
+psutil==7.1.0
+requests==2.31.0
+pywin32==306
+pyttsx3==2.90
+python-dotenv==1.0.0

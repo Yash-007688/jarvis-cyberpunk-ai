@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent - Alexa-like Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .chat-container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fafafa;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 70%;
+        }
+        
+        .user-message {
+            background-color: #dcf8c6;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .agent-message {
+            background-color: #e5e5ea;
+            margin-right: auto;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 25px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #stopButton {
+            background-color: #f44336;
+        }
+        
+        #stopButton:hover {
+            background-color: #da190b;
+        }
+        
+        .command-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        #commandInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+        
+        #sendButton {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background-color: #2196F3;
+            color: white;
+            cursor: pointer;
+        }
+        
+        #sendButton:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Agent - Alexa-like Assistant</h1>
+        
+        <div class="status" id="status">Ready to start</div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message agent-message">Hello! I'm your AI assistant. How can I help you today?</div>
+        </div>
+        
+        <div class="controls">
+            <button id="startButton">Start Listening</button>
+            <button id="stopButton" disabled>Stop Listening</button>
+        </div>
+        
+        <div class="command-input">
+            <input type="text" id="commandInput" placeholder="Type your command here...">
+            <button id="sendButton">Send</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const chatContainer = document.getElementById('chatContainer');
+        const statusElement = document.getElementById('status');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const commandInput = document.getElementById('commandInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        let isListening = false;
+        
+        // Add message to chat
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'agent-message');
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Update status
+        function updateStatus(text) {
+            statusElement.textContent = text;
+        }
+        
+        // Socket event listeners
+        socket.on('connect', () => {
+            updateStatus('Connected to AI Agent server');
+        });
+        
+        socket.on('agent_response', (data) => {
+            addMessage(data.response);
+            updateStatus('Agent responded');
+        });
+        
+        socket.on('error', (data) => {
+            addMessage('Error: ' + data.message, false);
+            updateStatus('Error occurred');
+        });
+        
+        // Button event listeners
+        startButton.addEventListener('click', () => {
+            socket.emit('start_listening');
+            isListening = true;
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            updateStatus('Listening for voice commands...');
+        });
+        
+        stopButton.addEventListener('click', () => {
+            // In a real implementation, we would stop the voice recognition
+            isListening = false;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            updateStatus('Stopped listening');
+        });
+        
+        // Send button event listener
+        sendButton.addEventListener('click', () => {
+            const command = commandInput.value.trim();
+            if (command) {
+                socket.emit('voice_command', { command: command });
+                addMessage(command, true);
+                commandInput.value = '';
+            }
+        });
+        
+        // Allow sending with Enter key
+        commandInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+    </script>
+</body>
+</html>
