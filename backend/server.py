@@ -51,9 +51,13 @@ You can perform file operations, system commands, and control music playback. Wh
 Language Policy:
 - Respond in the SAME LANGUAGE as the user (English or Hindi).
 - Use Devanagari script for Hindi responses.
-- If the user says "नमस्ते", you respond in Hindi.
-- If the user says "Hello", you respond in English.
 - Always keep the JSON keys (action, params, etc.) in English.
+
+Path Guidelines:
+- If the user mentions "Desktop", use "Desktop/filename.ext".
+- If the user mentions "Documents", use "Documents/filename.ext".
+- The system will automatically resolve these to the correct Windows user folders.
+- Example: "Create yash.py on desktop" -> {"action": "write_file", "params": {"file_path": "Desktop/yash.py", "content": "..."}, "response": "Creating yash.py on your Desktop."}
 
 File Operation Examples:
 - "Read the file test.txt" → {"action": "read_file", "params": {"file_path": "test.txt"}, "response": "Reading test.txt for you now."}
@@ -62,8 +66,6 @@ File Operation Examples:
 Music Control Examples:
 - "Play music" → {"action": "music_play", "params": {}, "response": "Resuming playback."}
 - "गाना बजाओ" → {"action": "music_play", "params": {}, "response": "गाना शुरू कर रहा हूँ।"}
-- "Play Blinding Lights" → {"action": "music_play_song", "params": {"query": "Blinding Lights"}, "response": "Searching for and playing Blinding Lights."}
-- "व्हाट्स प्लेइंग" → {"action": "music_current", "params": {}, "response": "देखता हूँ अभी क्या बज रहा है।"}
 
 If the user is just chatting (not requesting an operation), respond normally in their language without JSON.
 
@@ -109,11 +111,14 @@ def parse_ai_response(ai_response):
         # Try to find JSON in the response
         json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
         if json_match:
-            command_data = json.loads(json_match.group())
+            json_str = json_match.group()
+            print(f"DEBUG: Found JSON: {json_str}")
+            command_data = json.loads(json_str)
             if 'action' in command_data:
                 return command_data
         return None
-    except:
+    except Exception as e:
+        print(f"DEBUG: JSON Parse Error: {e}")
         return None
 
 def execute_system_command(command_data):
@@ -121,96 +126,70 @@ def execute_system_command(command_data):
     action = command_data.get('action')
     params = command_data.get('params', {})
     
-    # File operations
-    if action == 'read_file':
-        return system_controller.read_file(params.get('file_path', ''))
-    elif action == 'write_file':
-        return system_controller.write_file(
-            params.get('file_path', ''),
-            params.get('content', '')
-        )
-    elif action == 'delete_file':
-        return system_controller.delete_file(params.get('file_path', ''))
-    elif action == 'rename_file':
-        return system_controller.rename_file(
-            params.get('file_path', ''),
-            params.get('new_path', '')
-        )
-    elif action == 'move_file':
-        return system_controller.move_file(
-            params.get('file_path', ''),
-            params.get('destination', '')
-        )
-    elif action == 'copy_file':
-        return system_controller.copy_file(
-            params.get('file_path', ''),
-            params.get('destination', '')
-        )
-    elif action == 'list_directory':
-        return system_controller.list_directory(params.get('dir_path', ''))
-    elif action == 'create_directory':
-        return system_controller.create_directory(params.get('dir_path', ''))
-    elif action == 'delete_directory':
-        return system_controller.delete_directory(params.get('dir_path', ''))
-    elif action == 'execute_command':
-        return system_controller.execute_command(params.get('command', ''))
+    print(f"DEBUG: Executing action: {action} with params: {params}")
     
-    # Music operations - use Spotify API if available, otherwise media keys
-    elif action == 'music_play':
-        if use_spotify_api:
-            return spotify_controller.play()
+    try:
+        # File operations
+        if action == 'read_file':
+            return system_controller.read_file(params.get('file_path', ''))
+        elif action == 'write_file':
+            return system_controller.write_file(
+                params.get('file_path', ''),
+                params.get('content', '')
+            )
+        elif action == 'delete_file':
+            return system_controller.delete_file(params.get('file_path', ''))
+        elif action == 'rename_file':
+            return system_controller.rename_file(
+                params.get('file_path', ''),
+                params.get('new_path', '')
+            )
+        elif action == 'move_file':
+            return system_controller.move_file(
+                params.get('file_path', ''),
+                params.get('destination', '')
+            )
+        elif action == 'copy_file':
+            return system_controller.copy_file(
+                params.get('file_path', ''),
+                params.get('destination', '')
+            )
+        elif action == 'list_directory':
+            return system_controller.list_directory(params.get('dir_path', ''))
+        elif action == 'create_directory':
+            return system_controller.create_directory(params.get('dir_path', ''))
+        elif action == 'delete_directory':
+            return system_controller.delete_directory(params.get('dir_path', ''))
+        elif action == 'execute_command':
+            return system_controller.execute_command(params.get('command', ''))
+        
+        # Music operations
+        elif action == 'music_play':
+            return spotify_controller.play() if use_spotify_api else media_controller.play_pause()
+        elif action == 'music_pause':
+            return spotify_controller.pause() if use_spotify_api else media_controller.play_pause()
+        elif action == 'music_next':
+            return spotify_controller.next_track() if use_spotify_api else media_controller.next_track()
+        elif action == 'music_previous':
+            return spotify_controller.previous_track() if use_spotify_api else media_controller.previous_track()
+        elif action == 'music_search':
+            return spotify_controller.search_track(params.get('query', '')) if use_spotify_api else {"success": False, "error": "Search requires Spotify API"}
+        elif action == 'music_play_song':
+            return spotify_controller.play_search_result(params.get('query', '')) if use_spotify_api else {"success": False, "error": "Song selection requires Spotify API"}
+        elif action == 'music_current':
+            return spotify_controller.get_current_playback() if use_spotify_api else {"success": False, "error": "Current track info requires Spotify API"}
+        elif action == 'music_volume':
+            try:
+                volume = int(params.get('volume', 50))
+                return spotify_controller.set_volume(volume) if use_spotify_api else media_controller.volume_up() if volume > 50 else media_controller.volume_down()
+            except:
+                return {"success": False, "error": "Invalid volume value"}
+        
         else:
-            return media_controller.play_pause()
-    
-    elif action == 'music_pause':
-        if use_spotify_api:
-            return spotify_controller.pause()
-        else:
-            return media_controller.play_pause()
-    
-    elif action == 'music_next':
-        if use_spotify_api:
-            return spotify_controller.next_track()
-        else:
-            return media_controller.next_track()
-    
-    elif action == 'music_previous':
-        if use_spotify_api:
-            return spotify_controller.previous_track()
-        else:
-            return media_controller.previous_track()
-    
-    elif action == 'music_search':
-        if use_spotify_api:
-            return spotify_controller.search_track(params.get('query', ''))
-        else:
-            return {"success": False, "error": "Search requires Spotify API. Using media keys only."}
-    
-    elif action == 'music_play_song':
-        if use_spotify_api:
-            return spotify_controller.play_search_result(params.get('query', ''))
-        else:
-            return {"success": False, "error": "Song selection requires Spotify API. Use media keys for basic control."}
-    
-    elif action == 'music_current':
-        if use_spotify_api:
-            return spotify_controller.get_current_playback()
-        else:
-            return {"success": False, "error": "Current track info requires Spotify API."}
-    
-    elif action == 'music_volume':
-        volume = int(params.get('volume', 50))
-        if use_spotify_api:
-            return spotify_controller.set_volume(volume)
-        else:
-            # Use media keys for volume
-            if volume > 50:
-                return media_controller.volume_up()
-            else:
-                return media_controller.volume_down()
-    
-    else:
-        return {"success": False, "error": "Unknown action"}
+            return {"success": False, "error": f"Unknown action: {action}"}
+    except Exception as e:
+        print(f"DEBUG: Execution Error: {e}")
+        return {"success": False, "error": f"Execution error: {str(e)}"}
 
 @app.route('/health', methods=['GET'])
 def health_check():

@@ -18,6 +18,8 @@ class SystemController:
     def is_safe_path(self, path: str) -> bool:
         """Check if path is safe to operate on"""
         try:
+            # Expand ~ to home directory
+            path = os.path.expanduser(path)
             abs_path = os.path.abspath(path)
             for restricted in self.restricted_paths:
                 if abs_path.lower().startswith(restricted.lower()):
@@ -26,9 +28,26 @@ class SystemController:
         except:
             return False
     
+    def _resolve_path(self, path: str) -> str:
+        """Expand common Windows shortcuts and paths"""
+        path = os.path.expanduser(path)
+        
+        # Handle "Desktop", "Documents", etc. if they are at the start
+        user_profile = os.environ.get('USERPROFILE', os.path.expanduser('~'))
+        
+        if path.lower().startswith('desktop/'):
+            path = os.path.join(user_profile, 'Desktop', path[8:])
+        elif path.lower().startswith('desktop\\'):
+            path = os.path.join(user_profile, 'Desktop', path[8:])
+        elif path.lower() == 'desktop':
+            path = os.path.join(user_profile, 'Desktop')
+            
+        return path
+    
     def read_file(self, file_path: str) -> Dict[str, Any]:
         """Read contents of a file"""
         try:
+            file_path = self._resolve_path(file_path)
             if not self.is_safe_path(file_path):
                 return {"success": False, "error": "Access to this path is restricted"}
             
@@ -61,6 +80,7 @@ class SystemController:
     def write_file(self, file_path: str, content: str, mode: str = 'w') -> Dict[str, Any]:
         """Write content to a file"""
         try:
+            file_path = self._resolve_path(file_path)
             if not self.is_safe_path(file_path):
                 return {"success": False, "error": "Access to this path is restricted"}
             
@@ -82,6 +102,7 @@ class SystemController:
     def delete_file(self, file_path: str) -> Dict[str, Any]:
         """Delete a file"""
         try:
+            file_path = self._resolve_path(file_path)
             if not self.is_safe_path(file_path):
                 return {"success": False, "error": "Access to this path is restricted"}
             
