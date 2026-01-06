@@ -19,6 +19,9 @@ const Transcript = () => {
             recognition.current.continuous = false;
             recognition.current.interimResults = false;
 
+            // Set language to Hindi (India) - will understand both Hindi and English
+            recognition.current.lang = 'hi-IN';
+
             recognition.current.onstart = () => {
                 setIsListening(true);
             };
@@ -38,13 +41,31 @@ const Transcript = () => {
     const speak = (text) => {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
-            // Try to find a "technological" sounding voice
-            const voices = window.speechSynthesis.getVoices();
-            const techVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Microsoft David'));
-            if (techVoice) utterance.voice = techVoice;
 
-            utterance.pitch = 0.9;
-            utterance.rate = 1.0;
+            // Get available voices
+            const voices = window.speechSynthesis.getVoices();
+
+            // Try to find Hindi or Indian English voice
+            const hindiVoice = voices.find(v =>
+                v.lang.includes('hi-IN') || // Hindi India
+                v.lang.includes('en-IN') || // English India
+                v.name.includes('Hindi') ||
+                v.name.includes('India')
+            );
+
+            if (hindiVoice) {
+                utterance.voice = hindiVoice;
+                console.log('Using voice:', hindiVoice.name);
+            } else {
+                // Fallback: Use any available voice with modified settings for Indian accent
+                console.log('Hindi voice not found, using default with Indian accent settings');
+            }
+
+            // Voice settings for better Indian accent
+            utterance.pitch = 1.0;  // Normal pitch
+            utterance.rate = 0.95;  // Slightly slower for clarity
+            utterance.volume = 1.0;
+
             window.speechSynthesis.speak(utterance);
         }
     };

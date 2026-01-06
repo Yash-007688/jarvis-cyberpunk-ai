@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Tester - JARVIS</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00f3ff;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+        .voice-list {
+            background: rgba(17, 17, 17, 0.8);
+            border: 1px solid #00f3ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .voice-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0, 243, 255, 0.1);
+            border-left: 3px solid #00f3ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .voice-item:hover {
+            background: rgba(0, 243, 255, 0.2);
+            transform: translateX(5px);
+        }
+        .voice-item.hindi {
+            border-left-color: #0aff00;
+            background: rgba(10, 255, 0, 0.1);
+        }
+        .voice-item.hindi:hover {
+            background: rgba(10, 255, 0, 0.2);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(17, 17, 17, 0.8);
+            border: 1px solid #00f3ff;
+            border-radius: 8px;
+        }
+        input, button {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        button {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+        .info {
+            background: rgba(10, 255, 0, 0.1);
+            border: 1px solid #0aff00;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-left: 10px;
+        }
+        .badge.hindi {
+            background: #0aff00;
+            color: #000;
+        }
+        .badge.english {
+            background: #00f3ff;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎙️ JARVIS Voice Tester</h1>
+    
+    <div class="info">
+        <strong>ℹ️ Instructions:</strong><br>
+        - Click on any voice to test it<br>
+        - Green highlighted voices are Hindi/Indian voices<br>
+        - If no Hindi voice is available, Windows will use the default voice
+    </div>
+
+    <div class="test-section">
+        <h3>Test Custom Text:</h3>
+        <input type="text" id="testText" value="नमस्ते, मैं जार्विस हूं। आपकी सहायता के लिए तैयार हूं।" style="width: 80%;">
+        <br>
+        <button onclick="testCurrentVoice()">🔊 Test Selected Voice</button>
+    </div>
+
+    <div class="voice-list">
+        <h3>Available Voices:</h3>
+        <div id="voicesList"></div>
+    </div>
+
+    <script>
+        let voices = [];
+        let selectedVoice = null;
+
+        function loadVoices() {
+            voices = window.speechSynthesis.getVoices();
+            displayVoices();
+        }
+
+        function displayVoices() {
+            const voicesList = document.getElementById('voicesList');
+            voicesList.innerHTML = '';
+
+            if (voices.length === 0) {
+                voicesList.innerHTML = '<p>Loading voices... Please wait.</p>';
+                return;
+            }
+
+            voices.forEach((voice, index) => {
+                const isHindi = voice.lang.includes('hi-IN') || 
+                               voice.lang.includes('en-IN') || 
+                               voice.name.includes('Hindi') || 
+                               voice.name.includes('India');
+                
+                const div = document.createElement('div');
+                div.className = 'voice-item' + (isHindi ? ' hindi' : '');
+                div.onclick = () => selectVoice(voice);
+                
+                const langBadge = isHindi ? 
+                    '<span class="badge hindi">HINDI/INDIAN</span>' : 
+                    '<span class="badge english">OTHER</span>';
+                
+                div.innerHTML = `
+                    <strong>${voice.name}</strong> ${langBadge}<br>
+                    <small>Language: ${voice.lang} | ${voice.localService ? 'Local' : 'Remote'}</small>
+                `;
+                
+                voicesList.appendChild(div);
+            });
+        }
+
+        function selectVoice(voice) {
+            selectedVoice = voice;
+            const testText = document.getElementById('testText').value;
+            speak(testText, voice);
+        }
+
+        function testCurrentVoice() {
+            const testText = document.getElementById('testText').value;
+            
+            if (selectedVoice) {
+                speak(testText, selectedVoice);
+            } else {
+                // Use Hindi voice if available
+                const hindiVoice = voices.find(v => 
+                    v.lang.includes('hi-IN') || 
+                    v.lang.includes('en-IN') || 
+                    v.name.includes('Hindi') || 
+                    v.name.includes('India')
+                );
+                speak(testText, hindiVoice);
+            }
+        }
+
+        function speak(text, voice) {
+            window.speechSynthesis.cancel(); // Stop any ongoing speech
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            if (voice) {
+                utterance.voice = voice;
+                console.log('Using voice:', voice.name);
+            }
+            
+            utterance.pitch = 1.0;
+            utterance.rate = 0.95;
+            utterance.volume = 1.0;
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Load voices
+        loadVoices();
+        
+        // Reload voices when they change (some browsers load them asynchronously)
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        // Auto-test Hindi voice on load
+        setTimeout(() => {
+            const hindiVoice = voices.find(v => 
+                v.lang.includes('hi-IN') || 
+                v.lang.includes('en-IN') || 
+                v.name.includes('Hindi') || 
+                v.name.includes('India')
+            );
+            
+            if (hindiVoice) {
+                console.log('Found Hindi voice:', hindiVoice.name);
+            } else {
+                console.log('No Hindi voice found. You may need to install Hindi language pack in Windows.');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
