@@ -39,6 +39,11 @@ speech_path = os.path.join(os.path.dirname(__file__), 'speech_system')
 if speech_path not in sys.path:
     sys.path.append(speech_path)
 
+# Add backend screen monitor to path
+screen_monitor_path = os.path.join(os.path.dirname(__file__), 'backend')
+if screen_monitor_path not in sys.path:
+    sys.path.append(screen_monitor_path)
+
 try:
     from config import brain_config, get_openrouter_api_key, get_model_config
     backend_available = True
@@ -52,6 +57,22 @@ try:
 except ImportError:
     speech_system_available = False
     print("Warning: Speech system not available. Using basic TTS.")
+
+try:
+    from screen_monitor import ScreenMonitor
+    screen_monitor_available = True
+    screen_monitor = ScreenMonitor()
+except ImportError:
+    screen_monitor_available = False
+    print("Warning: Screen monitor not available. Install required packages.")
+
+try:
+    from app_launcher import AppLauncher
+    app_launcher_available = True
+    app_launcher = AppLauncher()
+except ImportError:
+    app_launcher_available = False
+    print("Warning: App launcher not available. Install required packages.")
 
 # Initialize colorama
 colorama.init()
@@ -174,23 +195,23 @@ class JARVISLabInterface:
         
         # Boot sequence with delays
         boot_steps = [
-            "INITIALIZING JARVIS LAB SYSTEMS...",
-            "LOADING NEURAL NETWORKS...",
-            "ACTIVATING SECURITY PROTOCOLS...",
-            "CALIBRATING SENSORS...",
-            "JARVIS CORE LOADING...",
-            "NEURAL INTERFACE ONLINE...",
-            "API CONNECTION ESTABLISHED...",
-            "ALL SYSTEMS OPERATIONAL."
+            "🤖 INITIALIZING JARVIS ROBOTIC SYSTEMS...",
+            "🤖 LOADING NEURAL NETWORKS...",
+            "🤖 ACTIVATING SECURITY PROTOCOLS...",
+            "🤖 CALIBRATING SENSORS...",
+            "🤖 JARVIS CORE LOADING...",
+            "🤖 NEURAL INTERFACE ONLINE...",
+            "🤖 API CONNECTION ESTABLISHED...",
+            "🤖 ALL SYSTEMS OPERATIONAL."
         ]
         
         for i, step in enumerate(boot_steps):
             self.clear_screen()
             
             # Draw header
-            print(Fore.CYAN + Style.BRIGHT + "=" * 80)
-            print(Fore.MAGENTA + Style.BRIGHT + "JARVIS LAB INTERFACE v3.0")
-            print(Fore.CYAN + Style.BRIGHT + "=" * 80 + Style.RESET_ALL)
+            print(Fore.CYAN + Style.BRIGHT + "╔" + "═" * 78 + "╗")
+            print(Fore.MAGENTA + Style.BRIGHT + "║" + " " * 27 + "🤖 JARVIS ROBOTIC INTERFACE v3.0" + " " * 27 + "║")
+            print(Fore.CYAN + Style.BRIGHT + "╠" + "═" * 78 + "╣" + Style.RESET_ALL)
             
             # Draw boot progress
             print(Fore.GREEN + Style.BRIGHT + "\nSYSTEM BOOT SEQUENCE")
@@ -218,93 +239,70 @@ class JARVISLabInterface:
     
     def draw_interface(self):
         """Draw the complete interface with fixed zones"""
+        # Get current system stats
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
         # Fixed panel heights
-        top_panel_height = 5  # Camera and System Stats panels
-        ai_core_height = 6   # AI Core panel
-        bottom_panel_height = 7  # Data Stream and Command Module panels
+        camera_height = 3
+        system_stats_height = 5
+        data_stream_height = 10
+        chat_height = 15
         
-        # Top row: Camera HUD (left) and System Stats (right)
-        # Both panels must have the same height (top_panel_height)
-        for i in range(top_panel_height):
-            if i == 0:
-                # Top border
-                left_part = "┌─ CAMERA SUBSYSTEM ──────────────────┐"
-                right_part = "┌─ SYSTEM STATS ────────────────────┐"
-            elif i == 1:
-                # Status line
-                left_part = f"│ Status: {self.camera_status:<15}{' ' * (14-len(self.camera_status))}│"
-                right_part = "│ CPU:  0.0%                     │"
-            elif i == 2:
-                # Indicator line
-                if self.camera_status == "STANDBY":
-                    indicator = "●" if int(time.time() * 2) % 2 else "○"
-                elif self.camera_status == "ACTIVE":
-                    indicator = "●"
-                else:
-                    indicator = "○"
-                left_part = f"│ Indicator: {indicator}                      │"
-                right_part = "│ ░░░░░░░░░░░░░░░░░░░│"
-            elif i == 3:
-                # RAM line
-                left_part = "│                                   │"
-                right_part = "│ RAM:  0.0%                     │"
-            elif i == 4:
-                # Bottom border
-                left_part = "└────────────────────────────────────┘"
-                right_part = "│ ░░░░░░░░░░░░░░░░░░░│"
-            
-            # Ensure both panels have same height by filling with empty space if needed
-            if i < 5:  # Only print for the main 5-line panels
-                print(Fore.CYAN + left_part + Fore.MAGENTA + right_part + Style.RESET_ALL)
+        # Left side: Camera HUD at the top
+        print(Fore.CYAN + "┌─ 🤖 CAM ──────┐")
+        print(Fore.CYAN + f"│ {self.camera_status[:8]:<8} │")
+        print(Fore.CYAN + "└──────────────┘")
         
-        # Additional lines for system stats (static display)
-        print(Fore.MAGENTA + "│ DISK: 0.0%                     │")
-        print(Fore.MAGENTA + "│ ░░░░░░░░░░░░░░░░░░░│")
-        print(Fore.MAGENTA + f"│ TIME:{datetime.now().strftime('%H:%M:%S')}                     │")
-        print(Fore.MAGENTA + "└──────────────────────────────────┘" + Style.RESET_ALL)
+        # Left side: System Stats below camera
+        print(Fore.MAGENTA + "┌─ 🤖 SYS ──────┐")
+        print(Fore.MAGENTA + f"│ CPU: {cpu_percent:4.0f}% │")
+        print(Fore.MAGENTA + f"│ RAM: {memory.percent:4.0f}% │")
+        print(Fore.MAGENTA + f"│ DISK:{(disk.used/disk.total)*100:4.0f}% │")
+        print(Fore.MAGENTA + f"│ TIME:{datetime.now().strftime('%H:%M')} │")
+        print(Fore.MAGENTA + "└──────────────┘" + Style.RESET_ALL)
         
-        # Center: AI Core Display (fixed height)
-        print(Fore.GREEN + "┌─ AI CORE ──────────────────────────────────────────────────────────────────┐")
-        print(Fore.GREEN + f"│ {Fore.CYAN}{self.ai_response[:74]:<74}{Fore.GREEN}│")
-        print(Fore.GREEN + "├─────────────────────────────────────────────────────────────────────────┤")
+        # Center: Data Stream panel
+        print(Fore.CYAN + "┌─ 🤖 DATA STREAM ──────────────────────────────────────────────────────────┐")
         
-        # Show data stream in the middle section
-        for i in range(3):
+        # Show data stream content
+        for i in range(data_stream_height - 2):  # -2 for top and bottom borders
             if i < len(self.data_stream):
-                line = self.data_stream[i][:72]
-                print(Fore.GREEN + f"│ {Fore.MAGENTA}{line:<72}{Fore.GREEN}│")
+                line = self.data_stream[i][:76]
+                print(Fore.CYAN + f"│ {Fore.MAGENTA}{line:<76}{Fore.CYAN}│")
             else:
-                print(Fore.GREEN + f"│ {' ':<72}{Fore.GREEN}│")
+                # Generate random matrix-style data
+                if random.random() < 0.3:
+                    matrix_data = ''.join([random.choice('01') for _ in range(20)])
+                    print(Fore.CYAN + f"│ {matrix_data:<76}{Fore.CYAN}│")
+                else:
+                    print(Fore.CYAN + f"│ {' ':<76}{Fore.CYAN}│")
+        
+        print(Fore.CYAN + "└─────────────────────────────────────────────────────────────────────────┘" + Style.RESET_ALL)
+        
+        # Right side: WhatsApp-style Chat Container (extreme right)
+        print(Fore.GREEN + "┌─ 💬 CHAT ────────────────────────────────────────────────────────────────┐")
+        
+        # Show AI responses in WhatsApp-style format
+        for i in range(chat_height - 2):  # -2 for top and bottom borders
+            if i == 0:
+                # Show the current AI response
+                ai_msg = f"🤖 JARVIS: {self.ai_response[:62]}" if len(self.ai_response) <= 62 else f"🤖 JARVIS: {self.ai_response[:60]}..."
+                print(Fore.GREEN + f"│ {ai_msg:<76}{Fore.GREEN}│")
+            elif i == 1:
+                # Timestamp
+                timestamp = f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+                print(Fore.GREEN + f"│ {timestamp:<76}{Fore.GREEN}│")
+            else:
+                # Show data stream items in chat format
+                if i-2 < len(self.data_stream):
+                    chat_line = self.data_stream[i-2][:70]
+                    print(Fore.GREEN + f"│ 📩 {chat_line:<74}{Fore.GREEN}│")
+                else:
+                    print(Fore.GREEN + f"│ {' ':<76}{Fore.GREEN}│")
         
         print(Fore.GREEN + "└─────────────────────────────────────────────────────────────────────────┘" + Style.RESET_ALL)
-        
-        # Bottom row: Data Stream (left) and Command Module (right)
-        # Both panels must have the same height (bottom_panel_height)
-        for i in range(bottom_panel_height):
-            if i == 0:
-                # Top border
-                left_part = "┌─ DATA STREAM ──────────────────┐"
-                right_part = "┌─ COMMAND MODULE ──────────────┐"
-            elif i < 6:
-                # Content lines
-                if i-1 < len(self.data_stream):
-                    data_line = self.data_stream[i-1][-28:]  # Show last 28 chars to fit
-                    left_part = f"│ {data_line:<28}│"
-                else:
-                    # Generate random matrix-style data
-                    if random.random() < 0.3:
-                        matrix_data = ''.join([random.choice('01') for _ in range(10)])
-                        left_part = f"│ {matrix_data:<28}│"
-                    else:
-                        left_part = f"│ {' ':<28}│"
-                
-                right_part = f"│ {' ':<28}│"
-            else:
-                # Bottom border
-                left_part = "└───────────────────────────────┘"
-                right_part = "└───────────────────────────────┘"
-            
-            print(Fore.CYAN + left_part + Fore.MAGENTA + right_part + Style.RESET_ALL)
         
         # Print command prompt at the very bottom
         print(Fore.CYAN + f"\n[JARVIS] Enter command: " + Style.RESET_ALL, end='')
@@ -324,17 +322,17 @@ class JARVISLabInterface:
         self.add_to_memory("user", command)
         
         if cmd == "help":
-            response = "AVAILABLE COMMANDS: camera on, camera off, camera standby, status, help, api test, os info, list files, memory show, memory clear, shutdown, restart"
+            response = "AVAILABLE COMMANDS: camera on, camera off, camera standby, status, help, api test, os info, list files, screen capture, screen start, screen stop, system info, exec [command], launch [app], find [app], running apps, kill [app], memory show, memory clear, shutdown, restart"
         elif cmd == "status":
             cpu = psutil.cpu_percent()
             mem = psutil.virtual_memory().percent
             response = f"SYSTEM STATUS: CPU {cpu}%, RAM {mem}%, CAMERA {self.camera_status}"
         elif cmd == "camera on":
             self.camera_status = "ACTIVE"
-            response = "CAMERA SUBSYSTEM ACTIVATED. LIVE FEED ACTIVE."
+            response = self.activate_camera()
         elif cmd == "camera off":
             self.camera_status = "OFF"
-            response = "CAMERA SUBSYSTEM DEACTIVATED."
+            response = self.deactivate_camera()
         elif cmd == "camera standby":
             self.camera_status = "STANDBY"
             response = "CAMERA SUBSYSTEM IN STANDBY MODE."
@@ -350,6 +348,81 @@ class JARVISLabInterface:
         elif cmd == "memory clear":
             self.clear_memory()
             response = "CONVERSATION MEMORY CLEARED."
+        elif cmd == "screen capture":
+            if screen_monitor_available:
+                screenshot_path = screen_monitor.capture_screen()
+                if screenshot_path:
+                    response = f"SCREEN CAPTURED: {screenshot_path}"
+                else:
+                    response = "SCREEN CAPTURE FAILED."
+            else:
+                response = "SCREEN MONITOR NOT AVAILABLE."
+        elif cmd == "screen start":
+            if screen_monitor_available:
+                response = screen_monitor.start_monitoring()
+            else:
+                response = "SCREEN MONITOR NOT AVAILABLE."
+        elif cmd == "screen stop":
+            if screen_monitor_available:
+                response = screen_monitor.stop_monitoring()
+            else:
+                response = "SCREEN MONITOR NOT AVAILABLE."
+        elif cmd == "system info":
+            if screen_monitor_available:
+                sys_info = screen_monitor.get_system_info()
+                response = f"SYSTEM INFO: {sys_info['platform']} | CPU: {sys_info['cpu_percent']}% | RAM: {sys_info['memory_percent']}%"
+            else:
+                response = "SCREEN MONITOR NOT AVAILABLE."
+        elif cmd.startswith("exec "):
+            if screen_monitor_available:
+                command_to_run = cmd[5:]  # Remove "exec " from the command
+                result = screen_monitor.execute_command(command_to_run)
+                if result['success']:
+                    response = f"COMMAND OUTPUT: {result['stdout'][:200]}..."  # Limit output length
+                else:
+                    response = f"COMMAND ERROR: {result['error']}"
+            else:
+                response = "SCREEN MONITOR NOT AVAILABLE."
+        elif cmd.startswith("launch "):
+            if app_launcher_available:
+                app_name = cmd[7:]  # Remove "launch " from the command
+                result = app_launcher.launch_by_name(app_name)
+                if result['success']:
+                    response = f"APPLICATION LAUNCHED: {result['message']}"
+                else:
+                    response = f"LAUNCH ERROR: {result['error']}"
+            else:
+                response = "APP LAUNCHER NOT AVAILABLE."
+        elif cmd.startswith("find "):
+            if app_launcher_available:
+                app_name = cmd[5:]  # Remove "find " from the command
+                app_path = app_launcher.find_application(app_name)
+                if app_path:
+                    response = f"APPLICATION FOUND: {app_path}"
+                else:
+                    response = f"APPLICATION '{app_name}' NOT FOUND."
+            else:
+                response = "APP LAUNCHER NOT AVAILABLE."
+        elif cmd == "running apps":
+            if app_launcher_available:
+                apps = app_launcher.get_running_apps()
+                if isinstance(apps, list):
+                    app_names = [app.get('name', 'Unknown') for app in apps[:10]]  # Show first 10
+                    response = f"RUNNING APPS: {', '.join(app_names)}"
+                else:
+                    response = f"ERROR GETTING RUNNING APPS: {apps.get('error', 'Unknown error')}"
+            else:
+                response = "APP LAUNCHER NOT AVAILABLE."
+        elif cmd.startswith("kill "):
+            if app_launcher_available:
+                app_name = cmd[5:]  # Remove "kill " from the command
+                result = app_launcher.kill_application(app_name)
+                if result['success']:
+                    response = f"APP TERMINATED: {result['message']}"
+                else:
+                    response = f"KILL ERROR: {result['error']}"
+            else:
+                response = "APP LAUNCHER NOT AVAILABLE."
         elif cmd == "shutdown":
             response = "SHUTTING DOWN JARVIS SYSTEM..."
             self.running = False
@@ -526,6 +599,39 @@ class JARVISLabInterface:
         else:
             # If speech is not available, just show a message
             pass
+    
+    def activate_camera(self):
+        """Activate the camera system"""
+        try:
+            import cv2
+            # Try to access the camera
+            cap = cv2.VideoCapture(0)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret:
+                    cap.release()
+                    return "CAMERA SUBSYSTEM ACTIVATED. LIVE FEED ACTIVE."
+                else:
+                    cap.release()
+                    return "CAMERA SUBSYSTEM ACTIVATED. FEED READY."
+            else:
+                return "CAMERA SUBSYSTEM ACTIVATED. FEED READY."
+        except ImportError:
+            return "CAMERA SUBSYSTEM ACTIVATED. CV2 NOT INSTALLED."
+        except Exception as e:
+            return f"CAMERA SUBSYSTEM ACTIVATED. FEED ERROR: {str(e)}"
+    
+    def deactivate_camera(self):
+        """Deactivate the camera system"""
+        try:
+            import cv2
+            # Close any open camera connections
+            cv2.destroyAllWindows()
+            return "CAMERA SUBSYSTEM DEACTIVATED."
+        except ImportError:
+            return "CAMERA SUBSYSTEM DEACTIVATED. CV2 NOT INSTALLED."
+        except Exception as e:
+            return f"CAMERA SUBSYSTEM DEACTIVATED. ERROR: {str(e)}"
     
     def run_interface(self):
         """Main interface loop"""

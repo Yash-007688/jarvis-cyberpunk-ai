@@ -1,0 +1,15 @@
+Hello from JARVIS!
+
+This is a test file to demonstrate the system control capabilities.
+
+JARVIS can now:
+- Read files
+- Write files
+- Delete files
+- Rename files
+- Move files
+- List directories
+- Create directories
+- Execute system commands
+
+System Status: OPERATIONAL

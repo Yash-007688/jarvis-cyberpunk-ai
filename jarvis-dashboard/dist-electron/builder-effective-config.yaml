@@ -1,0 +1,12 @@
+directories:
+  output: dist-electron
+  buildResources: build
+appId: com.jarvis.dashboard
+productName: Jarvis Dashboard
+files:
+  - filter:
+      - dist/**/*
+      - electron/**/*
+win:
+  target: nsis
+electronVersion: 39.2.7
